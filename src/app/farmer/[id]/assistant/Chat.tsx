@@ -129,6 +129,12 @@ export default function Chat({ farmerId, firstName, defaultLanguage }: { farmerI
     }
   }
 
+  // Loads a sample photo of a damaged maize leaf, for demos without a real plant at hand.
+  async function loadSamplePhoto() {
+    const blob = await (await fetch("/images/sample-maize-leaf.jpg")).blob();
+    onFile(new File([blob], "feuille-mais.jpg", { type: "image/jpeg" }));
+  }
+
   function onFile(file: File | undefined) {
     if (!file) return;
     const reader = new FileReader();
@@ -156,6 +162,7 @@ export default function Chat({ farmerId, firstName, defaultLanguage }: { farmerI
         <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-brand-50 px-3 py-2 text-sm">{GREETING[lang](firstName)}</div>
         {messages.length === 0 && (
           <div className="flex flex-wrap gap-2">
+            <button onClick={loadSamplePhoto} className="rounded-full border border-amber-500/60 bg-amber-50 px-3 py-1 text-xs text-amber-900">📷 Essayer avec une photo exemple (feuille de maïs)</button>
             {SUGGESTIONS[lang].map((s) => (
               <button key={s} onClick={() => send(s)} className="rounded-full border border-brand-600/40 px-3 py-1 text-xs text-brand-800">{s}</button>
             ))}

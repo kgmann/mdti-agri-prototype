@@ -1,7 +1,7 @@
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 
 const TABS = [
-  { href: "/gov", label: "Carte" },
+  { href: "/gov", label: "Carte", exact: true },
   { href: "/gov/actors", label: "Acteurs" },
   { href: "/gov/yields", label: "Rendements" },
   { href: "/gov/alerts", label: "Alertes envoyées" },
@@ -11,13 +11,13 @@ const TABS = [
 export default function GovLayout({ children }: LayoutProps<"/gov">) {
   return (
     <div>
-      <div className="border-b border-black/10 bg-white">
+      <div className="sticky top-13 z-[1050] border-b border-black/10 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4">
-          <span className="mr-3 py-3 text-sm font-semibold text-brand-800">Tableau de bord MAEP</span>
+          <span className="mr-3 hidden py-3 text-sm font-semibold text-brand-800 md:inline">Tableau de bord MAEP</span>
           {TABS.map((t) => (
-            <Link key={t.href} href={t.href} className="whitespace-nowrap rounded px-3 py-3 text-sm text-neutral-700 hover:bg-brand-50 hover:text-brand-800">
+            <NavLink key={t.href} href={t.href} exact={t.exact} className="whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-sm text-neutral-600 hover:text-brand-800" activeClassName="!border-brand-600 !text-brand-800 font-medium">
               {t.label}
-            </Link>
+            </NavLink>
           ))}
         </div>
       </div>

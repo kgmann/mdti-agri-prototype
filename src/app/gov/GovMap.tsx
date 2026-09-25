@@ -75,7 +75,7 @@ export default function GovMap(props: Props) {
   const select = "w-full rounded border border-black/15 bg-white px-2 py-1.5 text-sm";
 
   return (
-    <div className="flex flex-col lg:h-[calc(100vh-106px)] lg:flex-row">
+    <div className="flex flex-col lg:h-[calc(100vh-98px)] lg:flex-row">
       <aside className="w-full shrink-0 space-y-3 overflow-y-auto border-r border-black/10 bg-white p-4 lg:w-80">
         <div>
           <h1 className="font-semibold">Exploitations — campagne {props.campaign}</h1>

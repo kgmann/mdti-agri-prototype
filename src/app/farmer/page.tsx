@@ -7,7 +7,10 @@ function FarmerCard({ f, why }: { f: FarmerSummary; why?: string }) {
   return (
     <Link href={`/farmer/${f.id}`} className="block rounded-xl border border-black/10 bg-white p-4 shadow-sm hover:border-brand-600">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold">{f.name}</span>
+        <span className="flex items-center gap-2 font-semibold">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs text-brand-800">{f.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span>
+          {f.name}
+        </span>
         {f.band && <Badge color={BAND_COLORS[f.band]}>Score {f.score}</Badge>}
       </div>
       <div className="text-sm text-neutral-600">{f.commune}, {f.department} · {f.mainCrop ?? "—"} · {f.language === "fon" ? "parle fon" : "français"}</div>
