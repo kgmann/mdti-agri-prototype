@@ -1,0 +1,55 @@
+# Misc notes
+
+Conventions and decisions that don't belong elsewhere but matter when working on the project.
+
+## Identifiers
+
+- **Persons (farmers) are identified by their NPI** (Numéro Personnel d'Identification, issued by ANIP from the national register of persons). Almost the whole population has one since the RAVIP census, so it doesn't put a barrier in front of smallholders.
+- **Organisations are identified by their IFU** (Identifiant Fiscal Unique, issued by DGI). An individual farmer may also have an IFU (DGI issues one from the NPI), but it is optional: requiring tax registration before a farmer can be registered would be a barrier.
+- These are **unique external identifiers, not primary keys.** Tables use internal IDs, so a missing or corrected national ID doesn't break references, and national IDs don't end up in URLs or logs. The partner API looks farmers up by NPI, because that is what a partner knows.
+- **Synthetic identifiers use obviously fake ranges** (NPIs start with `99`, IFUs with `9`), so the repo never contains numbers that could belong to real people.
+
+## Campaigns and crop cycles
+
+- A **campaign** is an agricultural year used for reporting, e.g. `2025-2026`. It is a row in the `campaigns` table with start and end dates. **Convention for the prototype: 1 April to 31 March.** I couldn't confirm MAEP's official boundaries; because campaigns are data, changing them doesn't require code changes.
+- A **crop cycle** is one planting on one parcel: crop, sowing date, expected harvest date, actual harvest date, area, quantity harvested and status (`planned`, `growing`, `harvested`, `failed`).
+- **A cycle belongs to the campaign in which its harvest falls** (the expected harvest date until it is harvested). This works for every crop:
+  - the south has two rainy seasons, so it can have two maize cycles in one campaign; the north has one;
+  - perennial crops (cashew, pineapple, oil palm) get one cycle per campaign, representing that year's harvest.
+- A parcel is **active** when it has a cycle in the `growing` status.
+- **Yield** = production / area, aggregated by campaign, crop and department.
+
+## Units and currency
+
+Areas in hectares, quantities in kilograms (tonnes in aggregates), money in CFA francs (XOF). Geometries are stored in WGS 84 (EPSG:4326); areas are computed on the geography type, so they are in true square metres.
+
+## Glossary (French → English)
+
+| French | English (code and docs) |
+|---|---|
+| filière | value chain |
+| campagne agricole | campaign |
+| parcelle | parcel |
+| intrants | inputs (fertilisers, seeds, pesticides) |
+| transformateur | processor |
+| distributeur | distributor |
+| coopérative | cooperative |
+| itinéraire technique | crop management guide |
+| appuis / recouvrement des appuis | support / repayment of support |
+| subvention | subsidy |
+| ATDA | territorial agricultural development agency |
+
+## Synthetic data
+
+- Boundaries (12 departments, 77 communes) are real. Everything else is generated with a fixed random seed.
+- Volumes: about 1,500 farmers and 2,500 parcels, a few dozen cooperatives, processors and distributors, 5 banks, 3 insurers, 5 past campaigns plus the current one.
+- Crops follow broad regional patterns (cotton and sorghum in the north, cassava, pineapple and oil palm in the south, maize everywhere, cashew in the centre-north, rice in lowlands). Yields are drawn around typical national values with regional and yearly variation.
+- Parcels are placed at random points inside real communes, so some fall in towns, forests or water. Acceptable for a prototype; a cropland mask would fix it.
+- Soil attributes are synthetic, by broad zone.
+- Names are common Beninese first names and surnames; any match with a real person is a coincidence.
+
+## Known limitations
+
+- Scores, predictions and lending ceilings are computed from synthetic data with simple, explainable methods. They show the mechanism, not validated models.
+- AI answers, photo diagnoses and Fon output are not validated. Fon speech output is not officially supported by the speech model.
+- One shared login, no audit trail, no per-partner credentials or consent management beyond a per-farmer flag.
