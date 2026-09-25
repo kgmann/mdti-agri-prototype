@@ -235,7 +235,8 @@ async function main() {
     const list = pointsByCommune.get(communeId)!;
     return list.length > 1 ? list.shift()! : list[0];
   };
-  const communesByDept = new Map<string, typeof communes>();
+  type CommuneRow = { id: number; name: string; dept: string };
+  const communesByDept = new Map<string, CommuneRow[]>();
   for (const c of communes) {
     if (!communesByDept.has(c.dept)) communesByDept.set(c.dept, []);
     communesByDept.get(c.dept)!.push(c);
