@@ -241,7 +241,6 @@ async function main() {
     if (!communesByDept.has(c.dept)) communesByDept.set(c.dept, []);
     communesByDept.get(c.dept)!.push(c);
   }
-  const deptOf = new Map(communes.map((c) => [c.id, c.dept]));
 
   // --- Campaigns, products, programmes -----------------------------------------
   const campaigns = CAMPAIGNS.map((code, i) => ({
