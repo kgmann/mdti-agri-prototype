@@ -199,9 +199,10 @@ export async function processorBatches(processorId: number, limit = 30): Promise
 
 export type BatchTrace = {
   batch: Batch & { processorId: number; processorName: string };
-  suppliers: { id: number; name: string; type: ActorType; commune: string; quantityKg: number; date: string }[];
+  processorLocation: { lat: number; lon: number };
+  suppliers: { id: number; name: string; type: ActorType; commune: string; quantityKg: number; date: string; lat: number; lon: number }[];
   // For supplies that came through a cooperative: its members who sold the same product to it that campaign.
-  viaCooperatives: { cooperativeId: number; cooperativeName: string; farmers: { id: number; name: string; quantityKg: number }[] }[];
+  viaCooperatives: { cooperativeId: number; cooperativeName: string; lat: number; lon: number; farmers: { id: number; name: string; quantityKg: number; lat: number; lon: number }[] }[];
 };
 
 // Trace a processed batch back to the actors who supplied its raw material.
@@ -215,25 +216,28 @@ export async function traceBatch(batchId: number): Promise<BatchTrace | null> {
     WHERE b.id = ${batchId}`;
   if (!batch) return null;
   const suppliers = await sql<BatchTrace["suppliers"]>`
-    SELECT a.id, a.name, a.type, c.name AS commune, t.quantity_kg AS "quantityKg", t.date::text
+    SELECT a.id, a.name, a.type, c.name AS commune, t.quantity_kg AS "quantityKg", t.date::text, ST_Y(a.location) AS lat, ST_X(a.location) AS lon
     FROM processing_batch_inputs bi JOIN transfers t ON t.id = bi.transfer_id
     JOIN actors a ON a.id = t.from_actor_id JOIN communes c ON c.id = a.commune_id
     WHERE bi.batch_id = ${batchId} ORDER BY t.date`;
-  const coopRows = await sql<{ cooperativeId: number; cooperativeName: string; id: number; name: string; quantityKg: number }[]>`
-    SELECT co.id AS "cooperativeId", co.name AS "cooperativeName", f.id, f.name, sum(t2.quantity_kg) AS "quantityKg"
+  const coopRows = await sql<{ cooperativeId: number; cooperativeName: string; coopLat: number; coopLon: number; id: number; name: string; quantityKg: number; lat: number; lon: number }[]>`
+    SELECT co.id AS "cooperativeId", co.name AS "cooperativeName", ST_Y(co.location) AS "coopLat", ST_X(co.location) AS "coopLon",
+      f.id, f.name, sum(t2.quantity_kg) AS "quantityKg", ST_Y(f.location) AS lat, ST_X(f.location) AS lon
     FROM processing_batch_inputs bi JOIN transfers t ON t.id = bi.transfer_id
     JOIN actors co ON co.id = t.from_actor_id AND co.type = 'cooperative'
     JOIN transfers t2 ON t2.to_actor_id = co.id AND t2.product_id = t.product_id AND t2.campaign_id = t.campaign_id
     JOIN actors f ON f.id = t2.from_actor_id
     WHERE bi.batch_id = ${batchId}
     GROUP BY co.id, co.name, f.id, f.name ORDER BY co.id, f.name`;
+  const [processorLocation] = await sql<{ lat: number; lon: number }[]>`
+    SELECT ST_Y(location) AS lat, ST_X(location) AS lon FROM actors WHERE id = ${batch.processorId}`;
   const viaCooperatives: BatchTrace["viaCooperatives"] = [];
   for (const r of coopRows) {
     let g = viaCooperatives.find((x) => x.cooperativeId === r.cooperativeId);
-    if (!g) viaCooperatives.push((g = { cooperativeId: r.cooperativeId, cooperativeName: r.cooperativeName, farmers: [] }));
-    g.farmers.push({ id: r.id, name: r.name, quantityKg: r.quantityKg });
+    if (!g) viaCooperatives.push((g = { cooperativeId: r.cooperativeId, cooperativeName: r.cooperativeName, lat: r.coopLat, lon: r.coopLon, farmers: [] }));
+    g.farmers.push({ id: r.id, name: r.name, quantityKg: r.quantityKg, lat: r.lat, lon: r.lon });
   }
-  return { batch, suppliers, viaCooperatives };
+  return { batch, processorLocation, suppliers, viaCooperatives };
 }
 
 // Crop history of an owner's parcels (farmer or cooperative).
@@ -247,4 +251,25 @@ export async function ownerCycles(ownerId: number) {
 
 export async function cooperativesList() {
   return sql<{ id: number; name: string }[]>`SELECT id, name FROM actors WHERE type = 'cooperative' ORDER BY name`;
+}
+
+export type NetworkNode = { id: number; name: string; type: ActorType; lat: number; lon: number; quantityKg: number; products: string[] };
+export type ActorNetwork = { center: { lat: number; lon: number }; suppliers: NetworkNode[]; buyers: NetworkNode[] };
+
+// Who sells to this actor and who buys from it (all campaigns, or one), with locations: the supply map.
+export async function actorNetwork(actorId: number, campaignId?: number, limit = 200): Promise<ActorNetwork> {
+  const side = (dir: "in" | "out") => sql<NetworkNode[]>`
+    SELECT o.id, o.name, o.type, ST_Y(o.location) AS lat, ST_X(o.location) AS lon,
+      sum(t.quantity_kg) AS "quantityKg", array_agg(DISTINCT pr.name_fr) AS products
+    FROM transfers t JOIN products pr ON pr.id = t.product_id
+    JOIN actors o ON o.id = ${dir === "in" ? sql`t.from_actor_id` : sql`t.to_actor_id`}
+    WHERE ${dir === "in" ? sql`t.to_actor_id` : sql`t.from_actor_id`} = ${actorId}
+      ${campaignId ? sql`AND t.campaign_id = ${campaignId}` : sql``}
+    GROUP BY o.id ORDER BY "quantityKg" DESC LIMIT ${limit}`;
+  const [[center], suppliers, buyers] = await Promise.all([
+    sql<{ lat: number; lon: number }[]>`SELECT ST_Y(location) AS lat, ST_X(location) AS lon FROM actors WHERE id = ${actorId}`,
+    side("in"),
+    side("out"),
+  ]);
+  return { center, suppliers, buyers };
 }

@@ -8,4 +8,4 @@ const ParcelMap = dynamic(() => import("./ParcelMapInner"), {
 });
 
 export default ParcelMap;
-export type { ParcelCollection, ParcelProps } from "./ParcelMapInner";
+export type { MapLine, MapPoint, ParcelCollection, ParcelProps } from "./ParcelMapInner";

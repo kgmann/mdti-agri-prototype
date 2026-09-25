@@ -1,4 +1,5 @@
 import { getCampaigns, getCurrentCampaign, getDepartments, getProducts } from "@/core/reference";
+import { priceHistory } from "@/core/markets";
 import { predictions, productionByDepartment, yieldHistory } from "@/core/stats";
 import { Card, Table } from "@/components/ui";
 import { fmt, tonnes } from "@/lib/format";
@@ -10,7 +11,13 @@ export default async function YieldsPage({ searchParams }: PageProps<"/gov/yield
   const department = typeof sp.department === "string" && sp.department ? Number(sp.department) : undefined;
   const [crops, departments, current, campaigns] = await Promise.all([getProducts("crop"), getDepartments(), getCurrentCampaign(), getCampaigns()]);
   const last = campaigns[campaigns.length - 2];
-  const [history, preds, byDept] = await Promise.all([yieldHistory(crop, department), predictions(crop, department), productionByDepartment(crop, last.id)]);
+  const [history, preds, byDept, prices] = await Promise.all([
+    yieldHistory(crop, department),
+    predictions(crop, department),
+    productionByDepartment(crop, last.id),
+    priceHistory(crop, department),
+  ]);
+  const priceOf = (campaign: string) => prices.find((p) => p.campaign === campaign)?.medianPriceXof;
 
   // National prediction = area-weighted average of department predictions.
   const area = preds.reduce((s, p) => s + p.predictedAreaHa, 0);
@@ -64,8 +71,13 @@ export default async function YieldsPage({ searchParams }: PageProps<"/gov/yield
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Historique (tableau)">
-          <Table head={["Campagne", "Surface", "Production", "Rendement", "Cycles"]} rows={history.map((h) => [h.campaign, `${fmt(h.areaHa)} ha`, tonnes(h.productionKg), `${fmt(h.yieldKgHa)} kg/ha`, h.cycles])} />
-          <p className="mt-2 text-xs text-neutral-500">La campagne en cours ne compte que les cycles déjà récoltés.</p>
+          <Table
+            head={["Campagne", "Surface", "Production", "Rendement", "Prix producteur", "Cycles"]}
+            rows={history.map((h) => [h.campaign, `${fmt(h.areaHa)} ha`, tonnes(h.productionKg), `${fmt(h.yieldKgHa)} kg/ha`, priceOf(h.campaign) ? `${fmt(priceOf(h.campaign))} FCFA/kg` : "–", h.cycles])}
+          />
+          <p className="mt-2 text-xs text-neutral-500">
+            La campagne en cours ne compte que les cycles déjà récoltés. Prix producteur : prix médian des ventes de producteurs enregistrées sur la plateforme.
+          </p>
         </Card>
         <Card title={`Production par département — ${last.code}`}>
           <Table head={["Département", "Surface", "Production", "Rendement"]} rows={byDept.map((d) => [d.department, `${fmt(d.areaHa)} ha`, tonnes(d.productionKg), `${fmt(d.yieldKgHa)} kg/ha`])} />

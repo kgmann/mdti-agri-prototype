@@ -1,20 +1,23 @@
 import { getFarmer, getFarmerParcels } from "@/core/farmers";
+import { farmerMarkets } from "@/core/markets";
 import { searchParcels } from "@/core/parcels";
 import { getCurrentCampaign } from "@/core/reference";
 import ParcelsMiniMap from "@/components/ParcelsMiniMap";
 import { Card } from "@/components/ui";
-import { LAND_TYPE_LABELS, STATUS_COLORS, STATUS_LABELS, date, fmt1, tonnes } from "@/lib/format";
+import { LAND_TYPE_LABELS, STATUS_COLORS, STATUS_LABELS, date, fmt, fmt1, tonnes } from "@/lib/format";
 import { getWeather, weatherLabel } from "@/lib/weather";
 
 export default async function FarmPage({ params }: PageProps<"/farmer/[id]">) {
   const id = Number((await params).id);
   const campaign = await getCurrentCampaign();
   const farmer = (await getFarmer(id))!;
-  const [parcels, features, weather] = await Promise.all([
+  const [parcels, features, weather, markets] = await Promise.all([
     getFarmerParcels(id),
     searchParcels({ owner: id }, campaign.id),
     getWeather(farmer.lat, farmer.lon),
+    farmerMarkets(id, campaign.id),
   ]);
+  const BUYER: Record<string, string> = { processor: "transformateur", distributor: "grossiste", cooperative: "coopérative" };
 
   return (
     <>
@@ -41,6 +44,45 @@ export default async function FarmPage({ params }: PageProps<"/farmer/[id]">) {
           <p className="text-sm text-neutral-500">Météo indisponible pour le moment.</p>
         )}
       </Card>
+
+      {markets.length > 0 && (
+        <Card title="Prix et acheteurs">
+          <div className="space-y-4">
+            {markets.map((m) => {
+              const change = m.medianPriceXof && m.previousYearPriceXof ? Math.round((m.medianPriceXof / m.previousYearPriceXof - 1) * 100) : null;
+              return (
+                <div key={m.crop}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="font-medium">{m.cropName}</span>
+                    {m.medianPriceXof ? (
+                      <span className="text-sm">
+                        <b className="text-lg">{fmt(m.medianPriceXof)}</b> FCFA/kg
+                        {change !== null && (
+                          <span className={`ml-2 text-xs ${change >= 0 ? "text-brand-700" : "text-red-700"}`}>{change >= 0 ? "▲" : "▼"} {Math.abs(change)} % sur un an</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-neutral-500">Pas de vente récente dans votre département</span>
+                    )}
+                  </div>
+                  {m.medianPriceXof && <div className="text-xs text-neutral-500">Prix médian payé aux producteurs de {farmer.department} sur 6 mois ({m.sales} ventes enregistrées)</div>}
+                  {m.buyers.length > 0 && (
+                    <ul className="mt-1 space-y-0.5 text-sm">
+                      {m.buyers.map((b) => (
+                        <li key={b.id} className="flex justify-between gap-2">
+                          <span>{b.name} <span className="text-xs text-neutral-500">({BUYER[b.type]}, {fmt1(b.distanceKm)} km)</span></span>
+                          <span className="shrink-0 text-xs text-neutral-600">{fmt(b.lastPriceXof)} FCFA/kg le {date(b.lastDate)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-xs text-neutral-500">Calculé à partir des ventes tracées sur la plateforme. Les acheteurs listés sont les plus proches ayant acheté ce produit.</p>
+        </Card>
+      )}
 
       <Card title={`Mes parcelles (${parcels.length})`}>
         <ParcelsMiniMap parcels={{ type: "FeatureCollection", features: features as never }} height="280px" />

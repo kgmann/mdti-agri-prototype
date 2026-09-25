@@ -1,7 +1,7 @@
 "use client";
 // Leaflet map of parcels. At country scale parcels are dots (a 2 ha field is invisible), from ZOOM_POLYGONS they are outlines.
 import { useEffect, useState } from "react";
-import { CircleMarker, GeoJSON, LayersControl, MapContainer, Polygon, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { CircleMarker, GeoJSON, LayersControl, MapContainer, Polygon, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import type { FeatureCollection, Geometry } from "geojson";
 
@@ -14,8 +14,17 @@ const BENIN_BOUNDS: L.LatLngBoundsExpression = [
   [12.45, 3.9],
 ];
 
+// Extra layers for flow maps (supply networks, traceability).
+export type MapLine = { positions: [number, number][]; color: string; weight: number; dashed?: boolean; label?: string };
+export type MapPoint = { lat: number; lon: number; color: string; radius: number; label: React.ReactNode };
+
+// Free NASA GIBS layers (no API key). "default" = most recent available date.
+const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best";
+
 type Props = {
   parcels: ParcelCollection;
+  lines?: MapLine[];
+  points?: MapPoint[];
   colorOf: (p: ParcelProps) => string;
   popup: (p: ParcelProps) => React.ReactNode;
   boundaries?: { departments: unknown; communes: unknown };
@@ -29,17 +38,25 @@ function ZoomWatcher({ onZoom }: { onZoom: (z: number) => void }) {
   return null;
 }
 
-function FitBounds({ parcels, enabled }: { parcels: ParcelCollection; enabled: boolean }) {
+function FitBounds({ parcels, points, enabled }: { parcels: ParcelCollection; points: MapPoint[]; enabled: boolean }) {
   const map = useMap();
   useEffect(() => {
-    if (!enabled || parcels.features.length === 0) return;
-    const b = L.geoJSON(parcels as never).getBounds();
-    if (b.isValid()) map.fitBounds(b, { padding: [30, 30], maxZoom: 16 });
-  }, [map, parcels, enabled]);
+    if (!enabled) return;
+    const b = L.latLngBounds([]);
+    if (parcels.features.length) b.extend(L.geoJSON(parcels as never).getBounds());
+    for (const p of points) b.extend([p.lat, p.lon]);
+    if (!b.isValid()) return;
+    // The container may not have its final size yet when the map mounts: measure again before fitting.
+    const t = setTimeout(() => {
+      map.invalidateSize();
+      map.fitBounds(b, { padding: [30, 30], maxZoom: 16 });
+    }, 100);
+    return () => clearTimeout(t);
+  }, [map, parcels, points, enabled]);
   return null;
 }
 
-export default function ParcelMapInner({ parcels, colorOf, popup, boundaries, fitToParcels, satelliteDefault, height = "100%" }: Props) {
+export default function ParcelMapInner({ parcels, lines = [], points = [], colorOf, popup, boundaries, fitToParcels, satelliteDefault, height = "100%" }: Props) {
   const [zoom, setZoom] = useState(7);
   const showPolygons = zoom >= ZOOM_POLYGONS || !!fitToParcels;
   return (
@@ -55,9 +72,25 @@ export default function ParcelMapInner({ parcels, colorOf, popup, boundaries, fi
             maxZoom={18}
           />
         </LayersControl.BaseLayer>
+        <LayersControl.Overlay name="Végétation — NDVI (NASA MODIS, 8 jours)">
+          <TileLayer
+            attribution='NDVI &copy; <a href="https://earthdata.nasa.gov/gibs">NASA GIBS</a> / MODIS'
+            url={`${GIBS}/MODIS_Terra_NDVI_8Day/default/default/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`}
+            maxNativeZoom={9}
+            opacity={0.7}
+          />
+        </LayersControl.Overlay>
+        <LayersControl.Overlay name="Pluie en cours (NASA IMERG)">
+          <TileLayer
+            attribution='Précipitations &copy; <a href="https://earthdata.nasa.gov/gibs">NASA GIBS</a> / GPM IMERG'
+            url={`${GIBS}/IMERG_Precipitation_Rate/default/default/GoogleMapsCompatible_Level6/{z}/{y}/{x}.png`}
+            maxNativeZoom={6}
+            opacity={0.75}
+          />
+        </LayersControl.Overlay>
       </LayersControl>
       <ZoomWatcher onZoom={setZoom} />
-      <FitBounds parcels={parcels} enabled={!!fitToParcels} />
+      <FitBounds parcels={parcels} points={points} enabled={!!fitToParcels} />
 
       {boundaries && (
         <>
@@ -86,6 +119,16 @@ export default function ParcelMapInner({ parcels, colorOf, popup, boundaries, fi
           </CircleMarker>
         ),
       )}
+      {lines.map((l, i) => (
+        <Polyline key={`l${i}`} positions={l.positions} pathOptions={{ color: l.color, weight: l.weight, opacity: 0.7, dashArray: l.dashed ? "6 6" : undefined }}>
+          {l.label && <Tooltip sticky>{l.label}</Tooltip>}
+        </Polyline>
+      ))}
+      {points.map((p, i) => (
+        <CircleMarker key={`p${i}`} center={[p.lat, p.lon]} radius={p.radius} pathOptions={{ color: "#ffffff", weight: 1.5, fillColor: p.color, fillOpacity: 0.95 }}>
+          <Popup>{p.label}</Popup>
+        </CircleMarker>
+      ))}
     </MapContainer>
   );
 }

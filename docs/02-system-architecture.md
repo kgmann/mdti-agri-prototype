@@ -56,6 +56,7 @@ The schema is in [`db/init/02-schema.sql`](../db/init/02-schema.sql) and is comm
 - **Campaigns and crop cycles.** A campaign is an agricultural year (e.g. 2025-2026). A crop cycle is one planting on one parcel, with its dates, status and harvest. A cycle belongs to the campaign in which its harvest falls. See [misc notes](04-misc-notes.md#campaigns-and-crop-cycles).
 - **Flows.** Traceability is stored as dated events and aggregated when read: input distributions (subsidised or not, on credit or not, repaid or not), transfers (sales between actors) and processing batches (input product to output product). A batch can reference the transfers it consumed, which enables tracing back to farmers.
 - **Products.** One catalogue for crops, processed products and inputs.
+- **Prices.** No separate price table: every recorded sale is a price observation, so prices (for farmers and officials) are medians over transfers.
 - **Alerts.** An alert and its recipients, fixed at sending time, each with a read date.
 - **Computed data.** Credit scores and yield predictions are stored tables, computed by the seed script. In production they would be refreshed periodically.
 

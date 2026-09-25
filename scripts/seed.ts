@@ -297,7 +297,7 @@ async function main() {
     for (let i = 0; i < count; i++) {
       const c = communeIn(dept);
       const crop = weighted(CROP_WEIGHTS[dept]);
-      const a = addActor("cooperative", `Coopérative des producteurs de ${prod[crop].name_fr.toLowerCase()} de ${c.name}`, c.id, takePoint(c.id), orgRegistered(), false);
+      const a = addActor("cooperative", `${pick(["Coopérative agricole", "Union des producteurs", "Coopérative villageoise des producteurs"])} de ${c.name}${coops.some((k) => k.commune === c.id) ? " II" : ""}`, c.id, takePoint(c.id), orgRegistered(), false);
       coops.push({ id: a.id, commune: c.id, dept, crop });
     }
   }

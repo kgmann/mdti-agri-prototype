@@ -11,7 +11,7 @@ The terms of reference describe a very broad platform. For the prototype I kept 
 - **Government officials** (MAEP): the ones who steer the sector and need a bird's-eye view.
 - **Banks**: an external partner consuming the data, to show that the platform is infrastructure others can build on.
 
-Cooperatives, processors, distributors and insurers exist **as data only**: they appear in the government dashboard (lists, filters, flows) but have no portal of their own.
+Cooperatives, processors, distributors and insurers exist **as data only**: they appear in the government's interactive dashboard (lists, filters, flows) but have no portal of their own.
 
 ### Priority tiers
 The tiers set the build order. Everything in **Must** makes a coherent demo on its own.
@@ -28,9 +28,12 @@ The tiers set the build order. Everything in **Must** makes a coherent demo on i
   - Plain-language data assistant for officials.
   - Traceability views: flows on actor pages and filters by inputs and processed products.
 - **Could**
-  - Tracing a processed batch back to the farmers who supplied it.
-  - Showing data assistant results on the map.
-  - API tab in the bank portal with example requests.
+  - Tracing a processed batch back to the farmers who supplied it (built).
+  - Supply maps of who sells to and buys from each actor (built).
+  - Local prices and nearby buyers for farmers (built).
+  - Free satellite layers on maps: vegetation index and current rainfall (built).
+  - API tab in the bank portal with example requests (built).
+  - Showing data assistant results on the map (not built).
 
 ### Out of scope
 - **Livestock and fisheries.** They don't fit the "crop on a parcel" model (herds, vaccinations, ponds) and would double the data model. The catalogue and actor model are generic enough to add them later as another production unit.
@@ -49,17 +52,19 @@ The whole site is behind a single shared login (HTTP basic auth). The landing pa
 ### Farmer portal
 The farmer portal is a responsive web app that works on a phone. The farmer first picks who they are from a short list of demo farmers (a "view as" selector), chosen to show different situations (active alert, eligible or not, Fon speaker…).
 
-- **My farm.** A map of the farmer's parcels over a satellite or street basemap. For each parcel: area, land type, soil information, the current crop cycle (crop, sowing date, expected harvest, status) and the last harvests. A weather card shows the current conditions and a short forecast for the farm's location.
-- **Alerts.** Alerts sent by the government appear prominently (a banner and a badge) until the farmer opens them. Each alert has a type (general, weather, pests and diseases, subsidy, market), a title and a text.
+- **My farm.** A map of the farmer's parcels over a satellite or street basemap. For each parcel: area, land type, soil information, the current crop cycle (crop, sowing date, expected harvest, status) and the last harvests. A weather card shows the current conditions and a short forecast for the farm's location. A prices card shows, for each crop the farmer grows, the median price recently paid to producers in their department (with the change over a year) and the three nearest registered buyers of that crop with their last price.
+- **Alerts.** Alerts sent by the government appear prominently (a banner and a badge) until the farmer opens them. Each alert has a type (general, weather, pests and diseases, subsidy, market), a title and a text, and can be read aloud for farmers who read with difficulty.
 - **Assistant.** A chat with an AI agronomy assistant, in French or Fon. The assistant knows the farmer's context (location, parcels, crops and their stage, soil, weather, recent alerts) and answers as an extension agent would, directly to the farmer. The farmer can attach a photo of a plant to get a diagnosis: likely problem, severity and what to do. The farmer can also talk instead of typing and hear the answer. Fon voice output is labelled experimental because the speech model does not officially support Fon.
 - **Credit and programmes.** The farmer's credit score (0–100 and a band from A to E) with the main reasons behind it, and their eligibility for the current campaign's programmes (e.g. fertiliser subsidy, campaign credit), each with the reason when not eligible. The farmer also sees whether they share their data with partners.
 
 ### Government dashboard
-- **Map.** A map of Bénin with department and commune boundaries and all registered parcels. At country scale parcels show as dots; zooming in shows their outlines. Parcels are coloured by crop (or by status). A filter panel narrows the map by department, commune, crop, active or not, area range, owner type, cooperative, and inputs received. Clicking a parcel shows its owner, area, soil, crop and status, with a link to the owner's page.
+An interactive dashboard giving officials a bird's-eye view of the sector and the means to act on it.
+
+- **Map.** A map of Bénin with department and commune boundaries and all registered parcels. At country scale parcels show as dots; zooming in shows their outlines. Parcels are coloured by crop (or by status). A filter panel narrows the map by department, commune, crop, active or not, area range, owner type, cooperative, and inputs received. Clicking a parcel shows its owner, area, soil, crop and status, with a link to the owner's page. Every map can switch to satellite imagery and overlay free NASA layers: a vegetation index (NDVI, 8-day composite) and current rainfall.
 - **Alerts.** From the same filters, the official can send an alert to all farmers who match: they choose a type, a title and a text, see how many farmers will receive it, and send. Recipients are fixed at the time of sending. A list shows past alerts with their audience size and how many recipients have read them.
 - **Actors.** A searchable, filterable list of all actors: farmers, cooperatives, processors, distributors, banks and insurers. Each actor has a page with its identity (NPI or IFU), location and, depending on its type: parcels and crop history, cooperative members, inputs received, and its flows (what it bought, from whom, what it sold or processed, to whom).
-- **Traceability.** Flows are recorded as dated events: inputs distributed, sales between actors and processing batches (e.g. cassava into gari). They appear on actor pages and can be used as filters (e.g. farmers who received NPK this campaign, processors producing gari). Optionally, a processing batch can be traced back to the farmers who supplied it.
-- **Yields and predictions.** Production, area and yield per campaign, crop and department, as charts and tables, plus the predicted yield for the current campaign. Predictions are computed periodically, not on demand.
+- **Traceability.** Flows are recorded as dated events: inputs distributed, sales between actors and processing batches (e.g. cassava into gari). They appear on actor pages and can be used as filters (e.g. farmers who received NPK this campaign, processors producing gari). Processors, cooperatives and distributors have a supply map: lines to everyone who sold to them or bought from them, sized by volume. A processing batch can be traced back to the farmers who supplied it, including through cooperatives, on a map.
+- **Yields, prices and predictions.** Production, area, yield and median producer price per campaign, crop and department, as charts and tables, plus the predicted yield for the current campaign. Predictions are computed periodically, not on demand.
 - **Data assistant.** Officials can ask questions in plain language (e.g. "which cooperatives supply the processors in Zou?"). The assistant turns the question into a read-only database query, runs it and shows both the query and the results.
 
 ### Bank portal

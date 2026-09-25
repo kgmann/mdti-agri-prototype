@@ -1,6 +1,6 @@
 # Agri-Digit Bénin — Prototype
 
-A proof of concept of **Agri-Digit Bénin**, the multi-value-chain digital agriculture platform with an AI layer described in the Ministry of Agriculture's (MAEP) terms of reference. It was built in a very short time, runs on synthetic data, and aims to show the core ideas end to end rather than to be complete.
+A prototype of **Agri-Digit Bénin**, the multi-value-chain digital agriculture platform with an AI layer described in the Ministry of Agriculture's (MAEP) terms of reference. It was built in a very short time, runs on synthetic data, and aims to show the core ideas end to end rather than to be complete.
 
 ## Scope
 
@@ -8,11 +8,11 @@ The platform is built around one shared data core and three target users:
 
 | Target | What they get |
 |---|---|
-| **Farmers** (primary actor) | A read-only view of their farm (parcels on a map, soil, current crop and status, weather), prominent government alerts, an AI assistant in French and Fon (text, voice, crop photo diagnosis), and their credit score and eligibility for programmes. |
-| **Government officials** | A map-centred dashboard of the country's farms with filters, a searchable list of all actors (farmers, cooperatives, processors, distributors, banks, insurers), traceability of inputs, sales and processing, yield history and predictions, targeted alerts to farmers, and a plain-language data assistant. |
-| **Banks** (partners) | Farmers ranked by credit score, with the evidence behind the score and an indicative lending ceiling computed from the bank's own policy. Conceptually this is an API service; the portal is a client of that API. |
+| **Farmers** (primary actor) | A read-only view of their farm (parcels on a map, soil, current crop and status, weather), local prices and nearby buyers for their crops, prominent government alerts that can be read aloud, an AI assistant in French and Fon (text, voice, crop photo diagnosis), and their credit score and eligibility for programmes. The platform has to be useful to farmers first, or the data stops flowing. |
+| **Government officials** | An interactive dashboard giving a bird's-eye view of the sector, to steer it and act on it: a map of the country's farms with filters and satellite layers, a searchable list of all actors (farmers, cooperatives, processors, distributors, banks, insurers), traceability of inputs, sales and processing with supply maps, yields, prices and predictions, targeted alerts to farmers, and a plain-language data assistant. |
+| **Banks** (partners) | Farmers ranked by credit score, with the evidence behind the score and an indicative lending ceiling computed from the bank's own policy. Verified production and repayment data, served through an API, lets lenders reach smallholders without collateral or paper files, which makes credit easier to get. The portal is a client of that API. |
 
-Underneath is a small **core** ("tiny DPI"): the registries (actors, parcels, crop cycles), the flows between actors, and the shared logic (scoring, eligibility, search). Every portal goes through it, and the partner API is its public face.
+Underneath is a small **core** ("tiny DPI"): the registries (actors, parcels, crop cycles), the flows between actors, and the shared logic (scoring, eligibility, search). Every portal goes through it, and the partner API is its public face. The point is that the data and rules are shared infrastructure that other ministries and partners can build on, not the internals of one app.
 
 What is explicitly out of scope (livestock, Bariba, SMS/USSD, payments, accounts, real national integrations…) and why is listed in the product specs.
 

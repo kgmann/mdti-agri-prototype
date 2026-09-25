@@ -169,6 +169,9 @@ export default function GovMap(props: Props) {
               : Object.entries(STATUS_LABELS).map(([k, l]) => <Legend key={k} label={l} color={STATUS_COLORS[k]} />).concat(<Legend key="none" label="Aucune culture" color={STATUS_COLORS.none} />)}
           </ul>
           <p className="mt-2 text-xs text-neutral-500">Points à l&apos;échelle du pays ; zoomez pour voir les contours des parcelles.</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            Calques (icône en haut à droite de la carte) : imagerie satellite, végétation (NDVI, NASA MODIS, vert foncé = végétation dense) et pluie en cours (NASA IMERG). Sources ouvertes et gratuites.
+          </p>
         </div>
       </aside>
       <div className="h-[70vh] flex-1 lg:h-auto">

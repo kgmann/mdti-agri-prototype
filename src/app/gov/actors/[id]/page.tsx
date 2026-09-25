@@ -4,6 +4,7 @@ import {
   ACTOR_TYPE_LABELS,
   actorFlows,
   actorInputs,
+  actorNetwork,
   actorTransfers,
   cooperativeMembers,
   getActor,
@@ -13,8 +14,9 @@ import {
 } from "@/core/actors";
 import { getFarmerScore } from "@/core/farmers";
 import { searchParcels } from "@/core/parcels";
-import { getCurrentCampaign } from "@/core/reference";
+import { getCampaigns, getCurrentCampaign } from "@/core/reference";
 import { listBanks } from "@/core/partner";
+import { NetworkMap, TraceMap } from "@/components/FlowMap";
 import ParcelsMiniMap from "@/components/ParcelsMiniMap";
 import { Badge, Card, Stat, Table } from "@/components/ui";
 import { BAND_COLORS, STATUS_LABELS, date, fmt, fmt1, tonnes, xof } from "@/lib/format";
@@ -42,6 +44,11 @@ export default async function ActorPage({ params, searchParams }: PageProps<"/go
     actor.type === "bank" ? listBanks() : Promise.resolve([]),
   ]);
   const trace = typeof sp.trace === "string" ? await traceBatch(Number(sp.trace)) : null;
+  // Supply map on the last completed campaign (the current one is only partly harvested).
+  const hasNetwork = actor.type === "processor" || actor.type === "cooperative" || actor.type === "distributor";
+  const campaigns = await getCampaigns();
+  const networkCampaign = campaigns[campaigns.findIndex((c) => c.isCurrent) - 1];
+  const network = hasNetwork ? await actorNetwork(actor.id, networkCampaign.id) : null;
   const policy = banks.find((b) => b.id === actor.id)?.policy;
 
   return (
@@ -84,6 +91,15 @@ export default async function ActorPage({ params, searchParams }: PageProps<"/go
         </Card>
       )}
 
+      {network && (network.suppliers.length > 0 || network.buyers.length > 0) && (
+        <Card title={`Carte d'approvisionnement — campagne ${networkCampaign.code}`}>
+          <p className="mb-2 text-sm text-neutral-600">
+            {network.suppliers.length} fournisseurs, {network.buyers.length} acheteurs. Chaque ligne relie deux acteurs qui ont échangé des produits, d&apos;après les ventes enregistrées.
+          </p>
+          <NetworkMap network={network} name={actor.name} />
+        </Card>
+      )}
+
       {members.length > 0 && (
         <Card title={`Membres (${members.length})`}>
           <Table
@@ -118,6 +134,7 @@ export default async function ActorPage({ params, searchParams }: PageProps<"/go
               <div className="font-semibold">
                 Traçabilité du lot #{trace.batch.id} : {tonnes(trace.batch.outputKg)} de {trace.batch.outputProduct.toLowerCase()} ({date(trace.batch.date)})
               </div>
+              <div className="my-3"><TraceMap trace={trace} /></div>
               <p className="mt-1">Matière première : {tonnes(trace.batch.inputKg)} de {trace.batch.inputProduct.toLowerCase()}, fournie par :</p>
               <ul className="mt-1 list-disc pl-5">
                 {trace.suppliers.map((s, i) => (
