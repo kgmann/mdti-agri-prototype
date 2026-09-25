@@ -51,7 +51,10 @@ export default function Chat({ farmerId, firstName, defaultLanguage }: { farmerI
   const recorder = useRef<MediaRecorder | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
-  useEffect(() => bottom.current?.scrollIntoView({ behavior: "smooth" }), [messages, busy]);
+  // Block body on purpose: an effect must return nothing or a cleanup function (Chrome's scrollIntoView returns a Promise).
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, busy]);
 
   const history = () => messages.map(({ role, text }) => ({ role, text }));
 
