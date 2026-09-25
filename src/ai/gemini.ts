@@ -49,14 +49,21 @@ export function pcmToWav(pcm: Buffer, sampleRate = 24000): Buffer {
   return Buffer.concat([header, pcm]);
 }
 
-export async function textToSpeech(text: string, language: "fr" | "fon"): Promise<Buffer> {
-  const instruction =
-    language === "fon"
-      ? "Lis ce texte en fongbe (langue fon du Bénin), d'une voix calme et chaleureuse :"
-      : "Lis ce texte en français, d'une voix calme et chaleureuse, avec un accent d'Afrique de l'Ouest :";
+// Removes Markdown symbols so they are not read aloud.
+export function plainText(md: string): string {
+  return md
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/[*_#`>]+/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^\s*[-•]\s+/gm, "")
+    .trim();
+}
+
+// Only the text is sent: any instruction in the prompt would be read aloud. The voice is set in speechConfig.
+export async function textToSpeech(text: string): Promise<Buffer> {
   const res = await gemini().models.generateContent({
     model: TTS_MODEL(),
-    contents: [{ role: "user", parts: [{ text: `${instruction}\n\n${text}` }] }],
+    contents: [{ role: "user", parts: [{ text: plainText(text) }] }],
     config: {
       responseModalities: ["AUDIO"],
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } },

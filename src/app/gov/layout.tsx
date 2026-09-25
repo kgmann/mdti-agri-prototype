@@ -6,6 +6,7 @@ const TABS = [
   { href: "/gov/yields", label: "Rendements" },
   { href: "/gov/alerts", label: "Alertes envoyées" },
   { href: "/gov/assistant", label: "Assistant données" },
+  { href: "/gov/indicators", label: "Indicateurs" },
 ];
 
 export default function GovLayout({ children }: LayoutProps<"/gov">) {

@@ -1,6 +1,7 @@
 "use client";
 // Farmer assistant: text, crop photo, voice in/out, in French or Fon.
 import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
 
 type Msg = { role: "user" | "model"; text: string; image?: { mimeType: string; data: string }; preview?: string; voice?: boolean };
 type Lang = "fr" | "fon";
@@ -118,7 +119,7 @@ export default function Chat({ farmerId, firstName, defaultLanguage }: { farmerI
   async function speak(i: number, content: string) {
     setSpeaking(i);
     try {
-      const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: content, language: lang }) });
+      const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: content }) });
       if (!res.ok) throw new Error((await res.json()).error);
       const audio = new Audio(URL.createObjectURL(await res.blob()));
       audio.onended = () => setSpeaking(null);
@@ -174,7 +175,13 @@ export default function Chat({ farmerId, firstName, defaultLanguage }: { farmerI
               {/* eslint-disable-next-line @next/next/no-img-element -- local data URL preview */}
               {m.preview && <img src={m.preview} alt="Photo envoyée" className="mb-2 max-h-48 rounded-lg" />}
               {m.voice && <span className="mr-1">🎤</span>}
-              {m.text}
+              {m.role === "model" ? (
+                <div className="whitespace-normal [&_li]:ml-4 [&_ol]:list-decimal [&_p]:my-1 [&_ul]:list-disc [&_ul]:my-1">
+                  <Markdown>{m.text}</Markdown>
+                </div>
+              ) : (
+                m.text
+              )}
               {m.role === "model" && (
                 <button onClick={() => speak(i, m.text)} disabled={speaking !== null} className="mt-1 block text-xs text-brand-700 underline disabled:opacity-50">
                   {speaking === i ? "Lecture…" : "🔊 Écouter"}

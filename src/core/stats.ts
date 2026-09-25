@@ -61,3 +61,83 @@ export async function overview(campaignId: number) {
       (SELECT count(*)::int FROM alerts) AS alerts`;
   return row;
 }
+
+// Monitoring indicators (the ToR's monitoring framework: coverage, inclusion, access to inputs and credit).
+export type DepartmentIndicators = {
+  department: string;
+  farmers: number;
+  womenPct: number;
+  youthPct: number;
+  areaHa: number;
+  inputAccessPct: number;
+  subsidizedPct: number;
+  repaymentPct: number | null;
+  coopPct: number;
+  avgScore: number;
+};
+
+const YOUTH_BIRTH_YEAR = 1992; // under 35 in 2026
+
+export async function indicatorsByDepartment(campaignId: number): Promise<DepartmentIndicators[]> {
+  return sql<DepartmentIndicators[]>`
+    WITH f AS (
+      SELECT a.id, d.name AS department, fp.gender, fp.birth_year, fp.cooperative_id,
+        (SELECT coalesce(sum(area_ha), 0) FROM parcels WHERE owner_id = a.id) AS area,
+        EXISTS (SELECT 1 FROM input_distributions i WHERE i.recipient_id = a.id AND i.campaign_id = ${campaignId}) AS got_inputs,
+        EXISTS (SELECT 1 FROM input_distributions i WHERE i.recipient_id = a.id AND i.campaign_id = ${campaignId} AND i.subsidized) AS got_subsidy,
+        (SELECT sum(credit_amount_xof) FROM input_distributions WHERE recipient_id = a.id AND campaign_id < ${campaignId}) AS credit,
+        (SELECT sum(repaid_amount_xof) FROM input_distributions WHERE recipient_id = a.id AND campaign_id < ${campaignId}) AS repaid,
+        cs.score
+      FROM actors a JOIN farmer_profiles fp ON fp.actor_id = a.id
+      JOIN communes c ON c.id = a.commune_id JOIN departments d ON d.id = c.department_id
+      LEFT JOIN credit_scores cs ON cs.farmer_id = a.id
+    )
+    SELECT department, count(*)::int AS farmers,
+      100.0 * avg((gender = 'F')::int) AS "womenPct",
+      100.0 * avg((birth_year >= ${YOUTH_BIRTH_YEAR})::int) AS "youthPct",
+      sum(area) AS "areaHa",
+      100.0 * avg(got_inputs::int) AS "inputAccessPct",
+      100.0 * avg(got_subsidy::int) AS "subsidizedPct",
+      100.0 * sum(repaid) / nullif(sum(credit), 0) AS "repaymentPct",
+      100.0 * avg((cooperative_id IS NOT NULL)::int) AS "coopPct",
+      avg(score) AS "avgScore"
+    FROM f GROUP BY department ORDER BY farmers DESC`;
+}
+
+export async function indicatorTotals(campaignId: number) {
+  const [row] = await sql<{
+    farmers: number; womenPct: number; youthPct: number; coopPct: number; sharingPct: number; areaHa: number;
+    activePct: number; inputAccessPct: number; subsidyValueXof: number; repaymentPct: number; defaults: number;
+    avgScore: number; alerts: number; alertReadPct: number;
+  }[]>`
+    SELECT
+      (SELECT count(*)::int FROM farmer_profiles) AS farmers,
+      (SELECT 100.0 * avg((gender = 'F')::int) FROM farmer_profiles) AS "womenPct",
+      (SELECT 100.0 * avg((birth_year >= ${YOUTH_BIRTH_YEAR})::int) FROM farmer_profiles) AS "youthPct",
+      (SELECT 100.0 * avg((cooperative_id IS NOT NULL)::int) FROM farmer_profiles) AS "coopPct",
+      (SELECT 100.0 * avg(shares_data_with_partners::int) FROM farmer_profiles) AS "sharingPct",
+      (SELECT sum(area_ha) FROM parcels) AS "areaHa",
+      (SELECT 100.0 * count(DISTINCT parcel_id) FILTER (WHERE status = 'growing') / (SELECT count(*) FROM parcels) FROM crop_cycles WHERE campaign_id = ${campaignId}) AS "activePct",
+      (SELECT 100.0 * count(DISTINCT recipient_id) / (SELECT count(*) FROM farmer_profiles) FROM input_distributions WHERE campaign_id = ${campaignId}) AS "inputAccessPct",
+      (SELECT coalesce(sum(value_xof), 0) FROM input_distributions WHERE campaign_id = ${campaignId} AND subsidized) AS "subsidyValueXof",
+      (SELECT 100.0 * sum(repaid_amount_xof) / nullif(sum(credit_amount_xof), 0) FROM input_distributions WHERE campaign_id < ${campaignId}) AS "repaymentPct",
+      (SELECT count(*)::int FROM input_distributions WHERE repayment_status = 'defaulted') AS defaults,
+      (SELECT avg(score) FROM credit_scores) AS "avgScore",
+      (SELECT count(*)::int FROM alerts) AS alerts,
+      (SELECT 100.0 * count(read_at) / nullif(count(*), 0) FROM alert_recipients) AS "alertReadPct"`;
+  return row;
+}
+
+export async function scoreBands() {
+  return sql<{ band: string; farmers: number }[]>`SELECT band, count(*)::int AS farmers FROM credit_scores GROUP BY band ORDER BY band`;
+}
+
+// Production and value per crop for a campaign.
+export async function productionByCrop(campaignId: number) {
+  return sql<{ crop: string; productionKg: number; areaHa: number; valueXof: number }[]>`
+    SELECT pr.name_fr AS crop, sum(coalesce(cc.harvested_kg, 0)) AS "productionKg", sum(cc.area_ha) AS "areaHa",
+      sum(coalesce(cc.harvested_kg, 0) * pr.reference_price_xof) AS "valueXof"
+    FROM crop_cycles cc JOIN products pr ON pr.id = cc.product_id
+    WHERE cc.campaign_id = ${campaignId} AND cc.status IN ('harvested', 'failed')
+    GROUP BY pr.name_fr ORDER BY "valueXof" DESC`;
+}

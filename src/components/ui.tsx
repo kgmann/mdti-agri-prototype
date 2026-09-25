@@ -38,7 +38,7 @@ export function Badge({ children, color = "#52514e" }: { children: React.ReactNo
 
 export function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-lg bg-neutral-50 px-3 py-2">
+    <div className="rounded-lg border border-black/10 bg-white px-3 py-2">
       <div className="text-xs text-neutral-500">{label}</div>
       <div className="text-lg font-semibold">{value}</div>
     </div>

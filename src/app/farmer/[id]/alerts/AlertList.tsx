@@ -16,7 +16,7 @@ export default function AlertList({ farmerId, alerts }: { farmerId: number; aler
     setError(null);
     open(a);
     try {
-      const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: `${a.title}. ${a.body}`, language: "fr" }) });
+      const res = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: `${a.title}. ${a.body}` }) });
       if (!res.ok) throw new Error((await res.json()).error);
       const audio = new Audio(URL.createObjectURL(await res.blob()));
       audio.onended = () => setPlaying(null);

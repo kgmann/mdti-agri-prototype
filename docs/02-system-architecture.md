@@ -73,7 +73,7 @@ All AI calls are made server-side with Gemini.
 
 - **Farmer assistant.** The system prompt carries the farmer's context: location, parcels, crops and stage, soil, weather, recent alerts. It asks for practical, safe advice addressed to the farmer, in the chosen language (French or Fon). There is no crop-guide corpus: the model's general knowledge plus the farm context is enough for a prototype.
 - **Photo diagnosis.** The farmer's photo goes to the same multimodal model within the conversation.
-- **Voice.** The browser records audio; the model transcribes and answers it; a text-to-speech model reads the answer out. Fon speech output is not officially supported by the model and is labelled experimental.
+- **Voice.** The browser records audio; the model transcribes and answers it; a text-to-speech model reads the answer out. Only the text (stripped of Markdown) is sent to the speech model: any instruction in that prompt would be read aloud too. Fon speech output is not officially supported by the model and is labelled experimental.
 - **Data assistant.** The model receives the commented schema and the question and returns one SQL query. The query runs as a **read-only database user** with a time limit and a row cap, so even a bad or malicious query cannot change data. This is deliberately the only safeguard: enough for a prototype.
 
 ## Security (prototype level)
