@@ -73,6 +73,7 @@ export async function demoFarmers(): Promise<(FarmerSummary & { why: string })[]
     (SELECT a.id, 'Alerte non lue, producteur de maïs du Borgou' AS why FROM actors a
       JOIN communes c ON c.id = a.commune_id JOIN departments d ON d.id = c.department_id AND d.name = 'Borgou'
       JOIN alert_recipients r ON r.farmer_id = a.id AND r.read_at IS NULL JOIN credit_scores cs ON cs.farmer_id = a.id
+      JOIN parcels p ON p.owner_id = a.id JOIN crop_cycles cc ON cc.parcel_id = p.id AND cc.status = 'growing' JOIN products pr ON pr.id = cc.product_id AND pr.code = 'maize'
       ORDER BY cs.score DESC LIMIT 1)
     UNION ALL
     (SELECT a.id, 'Parle fon, manioc et maïs dans le Zou' FROM actors a JOIN farmer_profiles fp ON fp.actor_id = a.id AND fp.preferred_language = 'fon'

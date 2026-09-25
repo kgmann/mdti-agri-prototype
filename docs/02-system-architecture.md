@@ -36,6 +36,7 @@ src/
   app/          pages (per portal) and API routes
   core/         the tiny DPI: data access and domain logic
   ai/           Gemini integrations
+  lib/          weather (Open-Meteo) and display helpers
   components/   UI components
 db/
   init/         SQL run on first database start (extensions, schema, read-only user)
@@ -44,7 +45,7 @@ scripts/        seed script (synthetic data, scores, predictions)
 deployments/    Docker Compose, Caddy, VPS setup and deploy scripts
 ```
 
-**The core is the tiny DPI.** It holds everything about the data: queries, filters, scoring, eligibility and the shared types. Rule: pages and API routes never query the database directly; they call the core. It lives in the same app for simplicity. In a real system it would be a separate service, published to partners and other ministries through X-Road.
+**The core is the tiny DPI.** It holds everything about the data: queries, filters, scoring, eligibility and the shared types. Rule: pages and API routes never query the database directly; they call the core. The bank portal goes one step further: it is a browser client of the partner API, like a bank's own system would be. It lives in the same app for simplicity. In a real system it would be a separate service, published to partners and other ministries through X-Road.
 
 ## Data model
 
