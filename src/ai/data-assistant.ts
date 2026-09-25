@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Type } from "@google/genai";
 import { readonlySql } from "@/core/db";
-import { gemini, MODEL } from "./gemini";
+import { generate } from "./gemini";
 
 const MAX_ROWS = 200;
 let schema: string | null = null;
@@ -28,8 +28,7 @@ ${schema}`;
 export type DataAnswer = { sql: string; explanation: string; columns: string[]; rows: Record<string, unknown>[]; truncated: boolean; error?: string };
 
 export async function askData(question: string): Promise<DataAnswer> {
-  const res = await gemini().models.generateContent({
-    model: MODEL(),
+  const res = await generate({
     contents: [{ role: "user", parts: [{ text: question }] }],
     config: {
       systemInstruction: systemPrompt(),

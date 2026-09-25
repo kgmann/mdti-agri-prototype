@@ -24,7 +24,7 @@ In a real deployment, each partner would have its own credentials and scopes, ev
 
 ## External services used
 
-- **Gemini API** (Google). Chat, image understanding and speech input use a multimodal model; speech output uses a text-to-speech model. Environment variables: `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_TTS_MODEL`. Only synthetic data is sent.
+- **Gemini API** (Google). Chat, image understanding and speech input use a multimodal model; speech output uses a text-to-speech model. Environment variables: `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODELS` (tried in order when the main model is overloaded or out of quota), `GEMINI_TTS_MODEL`. Only synthetic data is sent.
 - **Open-Meteo** forecast API. Called server-side with the farm's coordinates to get current conditions and a 7-day forecast; responses are cached for an hour. No key needed. For non-commercial use only, which fits a prototype.
 - **Basemaps.** OpenStreetMap tiles for the street map and Esri World Imagery for the satellite view, both with attribution.
 

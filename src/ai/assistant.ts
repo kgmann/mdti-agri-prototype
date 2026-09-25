@@ -3,7 +3,7 @@ import { Type, type Content, type Part } from "@google/genai";
 import { farmerAlerts } from "@/core/alerts";
 import { getFarmer, getFarmerParcels } from "@/core/farmers";
 import { getWeather, weatherSummary } from "@/lib/weather";
-import { gemini, MODEL } from "./gemini";
+import { generate } from "./gemini";
 
 export type ChatMessage = { role: "user" | "model"; text: string; image?: { mimeType: string; data: string } };
 export type Language = "fr" | "fon";
@@ -59,8 +59,7 @@ function toContents(messages: ChatMessage[]): Content[] {
 }
 
 export async function chat(farmerId: number, language: Language, messages: ChatMessage[]): Promise<string> {
-  const res = await gemini().models.generateContent({
-    model: MODEL(),
+  const res = await generate({
     contents: toContents(messages.slice(-12)),
     config: { systemInstruction: await systemPrompt(farmerId, language) },
   });
@@ -82,8 +81,7 @@ export async function voiceChat(
       { text: "Message vocal du producteur. Transcris-le fidèlement dans sa langue, puis réponds-lui en suivant tes règles." },
     ],
   });
-  const res = await gemini().models.generateContent({
-    model: MODEL(),
+  const res = await generate({
     contents,
     config: {
       systemInstruction: await systemPrompt(farmerId, language),

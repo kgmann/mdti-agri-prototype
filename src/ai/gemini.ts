@@ -1,5 +1,5 @@
 // Gemini client and helpers. All AI calls are server-side.
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type GenerateContentParameters, type GenerateContentResponse } from "@google/genai";
 
 let client: GoogleGenAI | null = null;
 export function gemini(): GoogleGenAI {
@@ -9,6 +9,25 @@ export function gemini(): GoogleGenAI {
 }
 
 export const MODEL = () => process.env.GEMINI_MODEL || "gemini-3.8-flash";
+// Tried in order when the main model is overloaded (503) or out of quota (429).
+const FALLBACK_MODELS = () => (process.env.GEMINI_FALLBACK_MODELS || "gemini-3.5-flash,gemini-3.5-flash-lite").split(",").map((m) => m.trim()).filter(Boolean);
+
+// generateContent on the main text model, falling back to the next model on capacity errors.
+export async function generate(params: Omit<GenerateContentParameters, "model">): Promise<GenerateContentResponse> {
+  const models = [MODEL(), ...FALLBACK_MODELS().filter((m) => m !== MODEL())];
+  let lastError: unknown;
+  for (const model of models) {
+    try {
+      return await gemini().models.generateContent({ ...params, model, config: { ...params.config, httpOptions: { timeout: 45000 } } });
+    } catch (e) {
+      const status = (e as { status?: number }).status;
+      // Retry on capacity errors and on network failures/timeouts (no status); fail fast on anything else.
+      if (status !== undefined && status !== 503 && status !== 429 && status !== 500) throw e;
+      lastError = e;
+    }
+  }
+  throw lastError;
+}
 export const TTS_MODEL = () => process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts";
 
 // Wraps raw 16-bit mono PCM (as returned by the TTS model) in a WAV header.
