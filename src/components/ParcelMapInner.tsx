@@ -1,6 +1,6 @@
 "use client";
 // Leaflet map of parcels. At country scale parcels are dots (a 2 ha field is invisible), from ZOOM_POLYGONS they are outlines.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CircleMarker, GeoJSON, LayersControl, MapContainer, Polygon, Polyline, Popup, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import type { FeatureCollection, Geometry } from "geojson";
@@ -20,6 +20,8 @@ export type MapPoint = { lat: number; lon: number; color: string; radius: number
 
 // Free NASA GIBS layers (no API key). "default" = most recent available date.
 const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best";
+const NO_LINES: MapLine[] = [];
+const NO_POINTS: MapPoint[] = [];
 
 type Props = {
   parcels: ParcelCollection;
@@ -35,30 +37,38 @@ type Props = {
 
 function ZoomWatcher({ onZoom }: { onZoom: (z: number) => void }) {
   const map = useMapEvents({ zoomend: () => onZoom(map.getZoom()) });
+  useEffect(() => {
+    onZoom(map.getZoom());
+  }, [map, onZoom]);
   return null;
 }
 
+// Fits the view to the content once per dataset (not on every re-render, or zooming would reset the view).
 function FitBounds({ parcels, points, enabled }: { parcels: ParcelCollection; points: MapPoint[]; enabled: boolean }) {
   const map = useMap();
+  const fitted = useRef<string | null>(null);
+  const key = `${parcels.features.length}:${parcels.features[0]?.properties.id ?? ""}:${points.length}:${points[0]?.lat ?? ""}`;
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || fitted.current === key) return;
     const b = L.latLngBounds([]);
     if (parcels.features.length) b.extend(L.geoJSON(parcels as never).getBounds());
     for (const p of points) b.extend([p.lat, p.lon]);
     if (!b.isValid()) return;
     // The container may not have its final size yet when the map mounts: measure again before fitting.
+    // Marked as fitted only once it actually ran (a re-render may cancel the pending timeout).
     const t = setTimeout(() => {
       map.invalidateSize();
       map.fitBounds(b, { padding: [30, 30], maxZoom: 16 });
+      fitted.current = key;
     }, 100);
     return () => clearTimeout(t);
-  }, [map, parcels, points, enabled]);
+  }, [map, parcels, points, enabled, key]);
   return null;
 }
 
-export default function ParcelMapInner({ parcels, lines = [], points = [], colorOf, popup, boundaries, fitToParcels, satelliteDefault, height = "100%" }: Props) {
+export default function ParcelMapInner({ parcels, lines = NO_LINES, points = NO_POINTS, colorOf, popup, boundaries, fitToParcels, satelliteDefault, height = "100%" }: Props) {
   const [zoom, setZoom] = useState(7);
-  const showPolygons = zoom >= ZOOM_POLYGONS || !!fitToParcels;
+  const showPolygons = zoom >= ZOOM_POLYGONS;
   return (
     <MapContainer bounds={BENIN_BOUNDS} style={{ height, width: "100%" }} preferCanvas scrollWheelZoom>
       <LayersControl position="topright">
